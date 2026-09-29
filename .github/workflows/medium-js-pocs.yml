@@ -1,0 +1,17 @@
+name: medium-js-pocs
+on:
+  push:
+    branches:
+      - audit/medium-pocs-20260930
+permissions:
+  contents: read
+jobs:
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: npm ci
+      - run: node scripts/poc-x402-transport-double-sign.mjs
+      - run: node scripts/poc-x402-200-without-settlement.mjs
