@@ -65,8 +65,8 @@ signer.signTypedData = async (...args) => {
 const signed = [];
 let phase = 0;
 
-const fetchImpl = async (_input, init = {}) => {
-  const payment = new Headers(init.headers || {}).get("X-PAYMENT");
+const fetchImpl = async (input, init = {}) => {
+  const payment = new Headers(input?.headers || init.headers || {}).get("X-PAYMENT");
   if (!payment) {
     // The merchant says no payment is currently attached.
     return json402();
