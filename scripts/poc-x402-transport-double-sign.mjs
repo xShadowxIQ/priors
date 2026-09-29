@@ -3,25 +3,30 @@ import { createServer } from "node:http";
 import { ethers } from "ethers";
 import { createPayer } from "../packages/x402/src/payer.mjs";
 import { robinhood } from "../packages/x402/src/robinhood.mjs";
-import { decodePaymentHeader } from "../sdk/x402.mjs";
 
-function requirement(payTo) {
+const wallet = ethers.Wallet.createRandom();
+const merchant = ethers.Wallet.createRandom().address;
+
+function requirement() {
   return {
     scheme: "exact",
-    network: "robinhood",
-    maxAmountRequired: "10000",
-    payTo,
+    network: robinhood.network,
+    amount: "10000",
+    payTo: merchant,
     asset: robinhood.usdg,
     maxTimeoutSeconds: 60,
-    resource: "https://merchant.example/paid"
+    extra: { name: robinhood.eip712.name, version: robinhood.eip712.version }
   };
 }
 
-function json402(body) {
-  return new Response(JSON.stringify(body), {
-    status: 402,
-    headers: { "content-type": "application/json" }
-  });
+function paymentRequiredHeader() {
+  const body = {
+    x402Version: 2,
+    error: "PAYMENT-SIGNATURE header is required",
+    resource: { url: "https://merchant.example/paid", description: "PoC resource" },
+    accepts: [requirement()]
+  };
+  return Buffer.from(JSON.stringify(body), "utf8").toString("base64");
 }
 
 function stub(balance) {
@@ -45,29 +50,36 @@ function stub(balance) {
   })));
 }
 
-const wallet = ethers.Wallet.createRandom();
-const providerStub = await stub(1_000_000n);
-const signer = wallet.connect(new ethers.JsonRpcProvider(providerStub.url, 4663, { staticNetwork: true }));
-const originalSignTypedData = signer.signTypedData.bind(signer);
+const rpc = await stub(1_000_000n);
+const signer = wallet.connect(new ethers.JsonRpcProvider(rpc.url, 4663, { staticNetwork: true }));
+
 let signCount = 0;
-const signedHeaders = [];
+const originalSignTypedData = signer.signTypedData.bind(signer);
 signer.signTypedData = async (...args) => {
   signCount++;
   return originalSignTypedData(...args);
 };
 
-const merchant = ethers.Wallet.createRandom().address;
-let signedRequests = 0;
+const seenPayments = [];
+let signedRequestCount = 0;
 const fetchImpl = async (_input, init = {}) => {
-  const payment = new Headers(init.headers || {}).get("X-PAYMENT");
-  if (!payment) return json402({ accepts: [requirement(merchant)] });
+  const payment = new Headers(init.headers || {}).get("PAYMENT-SIGNATURE");
+  if (!payment) {
+    return new Response("{}", {
+      status: 402,
+      headers: {
+        "PAYMENT-REQUIRED": paymentRequiredHeader(),
+        "content-type": "application/json"
+      }
+    });
+  }
 
-  signedRequests++;
-  signedHeaders.push(payment);
+  seenPayments.push(payment);
+  signedRequestCount++;
 
-  // The merchant received the signed authorization. Simulate the connection
-  // disappearing after it may have been accepted/cashable.
-  if (signedRequests === 1) throw new TypeError("fetch failed after payment was sent");
+  // First signed authorization is received by the merchant, but the client loses
+  // the transport connection before receiving the result.
+  if (signedRequestCount === 1) throw new TypeError("fetch failed after payment was sent");
 
   return new Response("paid", { status: 200 });
 };
@@ -85,29 +97,33 @@ try {
     /fetch failed after payment was sent/
   );
 
-  // The caller retries because the first call lost the signed headers.
+  // The caller retries the same logical purchase because the first call did not
+  // return the signed headers.
   const second = await payer.pay("https://merchant.example/paid");
   assert.equal(second.response.status, 200);
 
-  assert.equal(signCount, 2, "the same failed purchase caused two signatures");
-  assert.equal(signedHeaders.length, 2, "merchant saw both signed payment attempts");
+  assert.equal(signCount, 2, "retry caused a second signature");
+  assert.equal(seenPayments.length, 2, "merchant received two signed authorizations");
 
-  const first = decodePaymentHeader(signedHeaders[0]);
-  const secondDecoded = decodePaymentHeader(signedHeaders[1]);
+  const first = JSON.parse(Buffer.from(seenPayments[0], "base64").toString("utf8"));
+  const secondDecoded = JSON.parse(Buffer.from(seenPayments[1], "base64").toString("utf8"));
 
-  assert.equal(first.payload.authorization.value, "10000");
-  assert.equal(secondDecoded.payload.authorization.value, "10000");
-  assert.equal(first.payload.authorization.to, merchant);
-  assert.equal(secondDecoded.payload.authorization.to, merchant);
+  assert.equal(first.payload.accepted.amount, "10000");
+  assert.equal(secondDecoded.payload.accepted.amount, "10000");
+  assert.equal(first.payload.payload.authorization.value, "10000");
+  assert.equal(secondDecoded.payload.payload.authorization.value, "10000");
   assert.notEqual(
-    first.payload.authorization.nonce,
-    secondDecoded.payload.authorization.nonce,
-    "the two signed authorizations use different nonces and can be independently settled"
+    first.payload.payload.authorization.nonce,
+    secondDecoded.payload.payload.authorization.nonce,
+    "the two authorizations are independently nonce-bound"
   );
 
-  console.log("PASS: transport drop after signing loses the pending payment and a retry signs a second valid authorization");
+  console.log("PASS: post-signing transport failure causes a retry to sign a second x402 authorization");
   console.log("signatures:", signCount);
-  console.log("distinct nonces:", first.payload.authorization.nonce, secondDecoded.payload.authorization.nonce);
+  console.log("distinct nonces:",
+    first.payload.payload.authorization.nonce,
+    secondDecoded.payload.payload.authorization.nonce
+  );
 } finally {
-  providerStub.server.close();
+  rpc.server.close();
 }
