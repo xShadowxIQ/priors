@@ -66,8 +66,8 @@ signer.signTypedData = async (...args) => {
 
 const seenPayments = [];
 let signedRequestCount = 0;
-const fetchImpl = async (_input, init = {}) => {
-  const payment = new Headers(init.headers || {}).get("X-PAYMENT");
+const fetchImpl = async (input, init = {}) => {
+  const payment = new Headers(input?.headers || init.headers || {}).get("X-PAYMENT");
   if (!payment) return json402();
 
   seenPayments.push(payment);
