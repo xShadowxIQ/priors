@@ -18,4 +18,6 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.7.1
-      - run: forge test --match-contract MediumCandidateOwnershipTransferTest -vvv\n      - run: npm ci\n      - run: node scripts/poc-x402-transport-double-sign.mjs
+      - run: forge test --match-contract MediumCandidateOwnershipTransferTest -vvv
+      - run: npm ci
+      - run: node scripts/poc-x402-transport-double-sign.mjs
