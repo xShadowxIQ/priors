@@ -1,0 +1,17 @@
+name: PoC MCP validBefore clock skew
+on:
+  push:
+    branches:
+      - poc/mcp-validbefore-skew-20260929
+
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node scripts/test-mcp-validbefore-skew.mjs
