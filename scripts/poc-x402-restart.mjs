@@ -46,7 +46,7 @@ const rpc = http.createServer((req, res) => {
 
 await new Promise(resolve => rpc.listen(0, "127.0.0.1", resolve));
 const port = rpc.address().port;
-const provider = new JsonRpcProvider(\`http://127.0.0.1:\${port}\`, 4663, { staticNetwork: true, batchMaxCount: 1 });
+const provider = new JsonRpcProvider(`http://127.0.0.1:\${port}`, 4663, { staticNetwork: true, batchMaxCount: 1 });
 const wallet = new Wallet("0x" + "11".repeat(32), provider);
 
 const sent = [];
@@ -103,8 +103,8 @@ assert.notEqual(a.nonce, b.nonce, "restart caused a fresh EIP-3009 nonce");
 assert.equal(requestsWithoutPayment, 2);
 
 console.log("PASS: same payer instance reuses one payment, but a restarted payer signs a second distinct authorization.");
-console.log(\`first nonce : \${a.nonce}\`);
-console.log(\`second nonce: \${b.nonce}\`);
+console.log(`first nonce : \${a.nonce}`);
+console.log(`second nonce: \${b.nonce}`);
 console.log("Both authorizations target the same payTo and amount, so a merchant that received the first can settle both.");
 
 await new Promise(resolve => rpc.close(resolve));
