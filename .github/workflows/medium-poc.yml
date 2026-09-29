@@ -21,3 +21,4 @@ jobs:
       - run: forge test --match-contract MediumCandidateOwnershipTransferTest -vvv
       - run: npm ci
       - run: node scripts/poc-x402-transport-double-sign.mjs
+      - run: node scripts/poc-x402-200-without-settlement.mjs
