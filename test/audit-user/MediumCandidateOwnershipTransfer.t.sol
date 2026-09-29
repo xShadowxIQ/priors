@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {TreasuryV4Base} from "./TreasurySponsorV4.t.sol";
-import {CreditPoolV2} from "../src/CreditPoolV2.sol";
+import {TreasuryV4Base} from "../TreasurySponsorV4.t.sol";
+import {CreditPoolV2} from "../../src/CreditPoolV2.sol";
 
 /// @dev Candidate validation for the NFT-transfer + treasury-raise compound path.
 /// This is deliberately on a fork-only test branch and uses the existing mock registry.
