@@ -1,0 +1,16 @@
+name: x402-restart-poc
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node scripts/poc-x402-restart.mjs
