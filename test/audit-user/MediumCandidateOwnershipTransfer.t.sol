@@ -42,6 +42,6 @@ contract MediumCandidateOwnershipTransferTest is TreasuryV4Base {
 
         assertLt(pool.backing(TREASURY_ID), treasuryBefore);
         assertEq(usdc.balanceOf(mallory), 0);
-        assertEq(pool.getLoan(loan).status, CreditPoolV2.LoanStatus.Defaulted);
+        assertTrue(pool.getLoan(loan).status == CreditPoolV2.LoanStatus.Defaulted);
     }
 }
