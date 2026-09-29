@@ -1,0 +1,21 @@
+name: medium-poc
+
+on:
+  push:
+    branches:
+      - audit/medium-pocs-20260930
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
+      - run: forge test --match-contract MediumCandidateOwnershipTransferTest -vvv
