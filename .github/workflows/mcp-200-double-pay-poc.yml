@@ -1,0 +1,21 @@
+name: mcp-200-double-pay-poc
+
+on:
+  push:
+    branches:
+      - "poc/mcp-200-double-pay"
+
+permissions:
+  contents: read
+
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/poc-mcp-200-double-pay.mjs
